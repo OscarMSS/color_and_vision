@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "822739964524",
+    "project_id": "colorsandvision",
+    "storage_bucket": "colorsandvision.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:822739964524:android:0cd2459f1fb262464c3e49",
+        "android_client_info": {
+          "package_name": "com.example.colorsandvision"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDd8t1ecDg0Iv970IOIp5-dTFgFtxKBz44"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
