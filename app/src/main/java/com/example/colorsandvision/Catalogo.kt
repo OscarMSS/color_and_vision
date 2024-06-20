@@ -10,6 +10,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,7 +25,9 @@ import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -66,18 +69,18 @@ import com.google.firebase.storage.storage
 
 
 @Composable
-fun LenteCard(lente: LenteModel) {
+fun LenteCard(lente: LenteModel, lenteViewModel: LenteViewModel = viewModel()) {
+    var showDialog by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier
             .padding(8.dp)
             .fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(3.dp),//Elevacion de la card
+        elevation = CardDefaults.cardElevation(3.dp),
         colors = CardDefaults.cardColors(containerColor = Color.LightGray),
         shape = CutCornerShape(8.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Image(
                 painter = rememberAsyncImagePainter(lente.imagen),
                 contentDescription = null,
@@ -86,16 +89,47 @@ fun LenteCard(lente: LenteModel) {
                     .fillMaxWidth(),
                 contentScale = ContentScale.Crop
             )
-            Text(text = "Modelo: ${lente.modelo}",
+            Text(
+                text = "Modelo: ${lente.modelo}",
                 fontWeight = FontWeight.Bold,
-                color = colorResource(id = R.color.AzulMarino))
-            Text(text = "Marca: ${lente.marca}",color = colorResource(id = R.color.AzulMarino))
-            Text(text = "Color: ${lente.color}",color = colorResource(id = R.color.AzulMarino))
-            Text(text = "Material: ${lente.material}",color = colorResource(id = R.color.AzulMarino))
-            Text(text = "Precio: ${lente.precio}",color = colorResource(id = R.color.AzulMarino))
+                color = colorResource(id = R.color.AzulMarino)
+            )
+            Text(text = "Marca: ${lente.marca}", color = colorResource(id = R.color.AzulMarino))
+            Text(text = "Color: ${lente.color}", color = colorResource(id = R.color.AzulMarino))
+            Text(text = "Material: ${lente.material}", color = colorResource(id = R.color.AzulMarino))
+            Text(text = "Precio: ${lente.precio}", color = colorResource(id = R.color.AzulMarino))
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Botón eliminar alineado a la derecha
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                IconButton(
+                    onClick = { showDialog = true },
+                    modifier = Modifier.size(48.dp) // Tamaño del IconButton
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Eliminar",
+                        tint = colorResource(id = R.color.Rojo)
+                    )
+                }
+            }
+
+            // Dialogo de confirmación para eliminar
+            if (showDialog) {
+                ConfirmationDialog(
+                    showDialog = showDialog,
+                    onConfirm = { lenteViewModel.eliminarLente(lente.lenteid) },
+                    onDismiss = { showDialog = false }
+                )
+            }
         }
     }
 }
+
 
 @Composable
 fun Catalogo(navigationController: NavHostController, lenteViewModel: LenteViewModel = viewModel()) {
@@ -148,11 +182,7 @@ fun Catalogo(navigationController: NavHostController, lenteViewModel: LenteViewM
                                         color = colorResource(id = R.color.AzulMarino))},
                                 onClick = { navegation.navigate("selectAndUpload") }
                             )
-                            DropdownMenuItem(
-                                text = { Text(text = "Eliminar",
-                                        color = colorResource(id = R.color.AzulMarino)) },
-                                onClick = { /*TODO*/ }
-                            )
+
                         }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -165,8 +195,7 @@ fun Catalogo(navigationController: NavHostController, lenteViewModel: LenteViewM
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(lentes) { lente ->
-                    LenteCard(lente)
-                }
+                    LenteCard(lente = lente, lenteViewModel = lenteViewModel)                }
             }
         }
     )
@@ -197,13 +226,14 @@ fun SelectImageAndUploadScreen(lenteViewModel: LenteViewModel = viewModel()) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        IconButton(onClick = { launcher.launch("image/*") }) {
+        IconButton(onClick = { launcher.launch("image/*") },
+            modifier = Modifier.size(200.dp) ) {
             Image(
                 painter = painterResource(id = R.drawable.nuevo), // Recurso de imagen
                 contentDescription = "Seleccionar Imagen",
                 modifier = Modifier
                     //.padding(horizontal = 12.dp)
-                    .size(820.dp) // Tamaño personalizado para la imagen// Ajuste del padding
+                    .size(2000.dp) // Tamaño personalizado para la imagen// Ajuste del padding
             )
         }
 
@@ -311,3 +341,38 @@ fun SelectImageAndUploadScreen(lenteViewModel: LenteViewModel = viewModel()) {
     }
 }
 
+@Composable
+fun ConfirmationDialog(
+    showDialog: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { onDismiss() },
+            title = {
+                Text("Eliminar Lente")
+            },
+            text = {
+                Text("¿Está seguro que desea eliminar este lente?")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onConfirm()
+                        onDismiss()
+                    }
+                ) {
+                    Text("Eliminar")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { onDismiss() }
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+}

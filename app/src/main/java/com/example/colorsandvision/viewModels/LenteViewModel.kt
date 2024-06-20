@@ -19,6 +19,19 @@ class LenteViewModel : ViewModel() {
         cargarLentes()
     }
 
+    fun guardarLente(lente: LenteModel) {
+        val db = Firebase.firestore
+        val lentesRef = db.collection("catalogo")
+
+        lentesRef.add(lente.toMap())
+            .addOnSuccessListener { documentReference ->
+                Log.d("LenteViewModel", "Documento guardado con ID: ${documentReference.id}")
+            }
+            .addOnFailureListener { e ->
+                Log.w("LenteViewModel", "Error al guardar documento", e)
+            }
+    }
+
     private fun cargarLentes() {
         val db = Firebase.firestore
         db.collection("catalogo")
@@ -27,7 +40,7 @@ class LenteViewModel : ViewModel() {
                 val listaLentes = mutableListOf<LenteModel>()
                 for (document in result) {
                     val lente = document.toObject(LenteModel::class.java)
-                    listaLentes.add(lente)
+                    listaLentes.add(lente.copy(lenteid = document.id))
                 }
                 _lentes.value = listaLentes
             }
@@ -35,18 +48,20 @@ class LenteViewModel : ViewModel() {
                 Log.w("LenteViewModel", "Error getting documents: ", exception)
             }
     }
-    fun guardarLente(lente: LenteModel) {
+
+    fun eliminarLente(lenteId: String) {
         val db = Firebase.firestore
         val lentesRef = db.collection("catalogo")
 
-        lentesRef.add(lente.toMap())
-            .addOnSuccessListener { documentReference ->
-                Log.d("LenteViewModel", "Documento guardado con ID: ${documentReference.id}")
-                // Aquí podrías mostrar un mensaje o realizar alguna acción adicional
+        // Aquí nos aseguramos de que la referencia al documento es correcta
+        lentesRef.document(lenteId)
+            .delete()
+            .addOnSuccessListener {
+                Log.d("LenteViewModel", "Documento eliminado con ID: $lenteId")
+                cargarLentes()  // Recargar la lista de lentes después de la eliminación
             }
             .addOnFailureListener { e ->
-                Log.w("LenteViewModel", "Error al guardar documento", e)
-                // Manejo de errores
+                Log.w("LenteViewModel", "Error al eliminar documento", e)
             }
     }
 }
