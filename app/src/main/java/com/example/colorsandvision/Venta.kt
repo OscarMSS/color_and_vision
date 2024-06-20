@@ -271,7 +271,7 @@ fun Venta(navigationController: NavHostController) {
         )
         if (precioLenteError) {
             Text(
-                text = "Precio del lente es un campo obligatorio en caso de no haber un precio de lente ingrese 0",
+                text = "Campo obligatorio \n En caso de no haber un precio de lente ingrese 0",
                 color = Color.Red,
                 fontSize = 12.sp
             )
@@ -294,7 +294,7 @@ fun Venta(navigationController: NavHostController) {
         )
         if (precioAdicError) {
             Text(
-                text = "Precio adicional es un campo obligatorio, en caso de no haber un precio adicional ingrese 0",
+                text = "Campo obligatorio \n En caso de no haber un precio adicional ingrese 0",
                 color = Color.Red,
                 fontSize = 12.sp
             )
@@ -322,7 +322,7 @@ fun Venta(navigationController: NavHostController) {
         )
         if (fechaentregaError) {
             Text(
-                text = "Fecha de entrega debe estar en formato dd/mm/yyyy",
+                text = "Debe estar en formato dd/mm/yyyy",
                 color = Color.Red,
                 fontSize = 12.sp
             )

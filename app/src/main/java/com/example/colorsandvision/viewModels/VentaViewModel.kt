@@ -9,7 +9,6 @@ import com.google.firebase.firestore.FirebaseFirestore
 class VentaViewModel : ViewModel() {
     private val firestore = FirebaseFirestore.getInstance()
     val _addVentaResult = MutableLiveData<Result<String>>()
-    private val _searchVentaResult = MutableLiveData<Result<PacienteModel>>()
     fun addVenta(ventaModel: VentaModel) {
         val ventaMap = ventaModel.toMap()
         firestore.collection("venta")

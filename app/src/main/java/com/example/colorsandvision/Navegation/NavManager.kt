@@ -11,6 +11,7 @@ import com.example.colorsandvision.Login
 import com.example.colorsandvision.Menu
 import com.example.colorsandvision.Recuperar
 import com.example.colorsandvision.RegistroPaciente
+import com.example.colorsandvision.SelectImageAndUploadScreen
 import com.example.colorsandvision.Venta
 import com.example.colorsandvision.viewModels.PacienteViewModel
 import com.example.colorsandvision.viewModels.PasswordViewModel
@@ -47,6 +48,9 @@ fun NavManager(){
         }
         composable("Recuperar"){
             Recuperar(navigationController, PasswordViewModel())
+        }
+        composable("selectAndUpload") {
+            SelectImageAndUploadScreen()
         }
     }
 }

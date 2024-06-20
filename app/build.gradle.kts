@@ -76,6 +76,11 @@ dependencies {
     //Firebase Autentificacion
     implementation(libs.firebase.auth.ktx)
     implementation(libs.androidx.compose.material)
+    implementation(libs.firebase.storage)
+    implementation(libs.picasso)
+
+    implementation("io.coil-kt:coil-compose:2.6.0")
+
 
     // https://mvnrepository.com/artifact/mysql/mysql-connector-java
     implementation("mysql:mysql-connector-java:5.1.49")

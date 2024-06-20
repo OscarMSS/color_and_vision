@@ -95,6 +95,7 @@ fun Menu(navigationController: NavHostController){
                                 "Catalogo de lentes" -> navegation.navigate("Catalogo")
                                 "Exámen de la vista" -> navegation.navigate("Examen")
                                 "Agregar Paciente" -> navegation.navigate("Paciente")
+                                //"Consulta Paciente" -> navegation.navigate("ListaPaciente")
                             }
                         }
                     ) {
