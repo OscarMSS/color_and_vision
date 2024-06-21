@@ -7,11 +7,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,15 +21,25 @@ import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Create
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -44,6 +56,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.colorsandvision.model.PacienteModel
 import com.example.colorsandvision.viewModels.PacienteViewModel
@@ -407,4 +421,201 @@ fun RegistroPaciente(navigationController: NavHostController){
         }
     }
 }
+
+@Composable
+fun PacienteCard(paciente: PacienteModel, onEdit: (PacienteModel) -> Unit) {
+    var showEditDialog by remember { mutableStateOf(false) }
+
+    if (showEditDialog) {
+        EditPacienteDialog(
+            paciente = paciente,
+            onDismiss = { showEditDialog = false },
+            onSave = { updatedPaciente ->
+                onEdit(updatedPaciente)
+                showEditDialog = false
+            }
+        )
+    }
+    Card(
+        modifier = Modifier
+            .padding(8.dp)
+            .fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(8.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.LightGray),
+        shape = CutCornerShape(8.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "${paciente.nombre} ${paciente.apellidop} ${paciente.apellidom}",
+                fontWeight = FontWeight.Bold,
+                color = colorResource(id = R.color.AzulMarino)
+            )
+            Text(text = "Celular: ${paciente.celular}", color = colorResource(id = R.color.AzulMarino))
+            Text(text = "Edad: ${paciente.edad}", color = colorResource(id = R.color.AzulMarino))
+            Text(text = "Enfermedades: ${paciente.enfermedades}", color = colorResource(id = R.color.AzulMarino))
+            Text(text = "Ocupación: ${paciente.ocupacion}", color = colorResource(id = R.color.AzulMarino))
+            Text(text = "Observaciones: ${paciente.observaciones}", color = colorResource(id = R.color.AzulMarino))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                IconButton(
+                    onClick = { showEditDialog = true },
+                    modifier = Modifier.size(48.dp) // Tamaño del IconButton
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Create,
+                        contentDescription = "Editar",
+                        tint = colorResource(id = R.color.Verde)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PacientesScreen(navigationController: NavHostController, viewModel: PacienteViewModel = viewModel()) {
+    val pacientes by viewModel.pacientes.observeAsState(emptyList())
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Consulta Pacientes",
+                            color = colorResource(id = R.color.AzulMarino),
+                            fontFamily = FontFamily.Serif,
+                            fontWeight = FontWeight.Normal
+                        )
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = {
+                        navigationController.navigate("Menu")
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Regresar",
+                            tint = colorResource(id = R.color.AzulMarino)
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xff64BDCD)
+                )
+            )
+        },
+        content = { padding ->
+            LazyColumn(
+                contentPadding = padding,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(pacientes) { paciente ->
+                    PacienteCard(
+                        paciente = paciente,
+                        onEdit = { updatedPaciente ->
+                            viewModel.updatePaciente(updatedPaciente)
+                        }
+                    )
+                }
+            }
+        }
+    )
+}
+
+
+@Composable
+fun EditPacienteDialog(
+    paciente: PacienteModel,
+    onDismiss: () -> Unit,
+    onSave: (PacienteModel) -> Unit
+) {
+    var edad by remember { mutableStateOf(paciente.edad) }
+    var enfermedades by remember { mutableStateOf(paciente.enfermedades) }
+    var ocupacion by remember { mutableStateOf(paciente.ocupacion) }
+    var observaciones by remember { mutableStateOf(paciente.observaciones) }
+
+    AlertDialog(
+        onDismissRequest = { onDismiss() },
+        title = { Text(text = "Editar Paciente",
+            color = colorResource(id = R.color.AzulMarino),
+            fontWeight = FontWeight.Bold,
+            fontFamily = FontFamily.Serif) },
+        text = {
+            Column {
+                TextField(
+                    value = edad,
+                    onValueChange = { edad = it },
+                    label = { Text("Edad",
+                        color = colorResource(id = R.color.AzulMarino),
+                        fontFamily = FontFamily.Serif) }
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                TextField(
+                    value = enfermedades,
+                    onValueChange = { enfermedades = it },
+                    label = { Text("Enfermedades",
+                        color = colorResource(id = R.color.AzulMarino),
+                        fontFamily = FontFamily.Serif) }
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                TextField(
+                    value = ocupacion,
+                    onValueChange = { ocupacion = it },
+                    label = { Text("Ocupación",
+                        color = colorResource(id = R.color.AzulMarino),
+                        fontFamily = FontFamily.Serif) }
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                TextField(
+                    value = observaciones,
+                    onValueChange = { observaciones = it },
+                    label = { Text("Observaciones",
+                        color = colorResource(id = R.color.AzulMarino),
+                        fontFamily = FontFamily.Serif) }
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                val updatedPaciente = paciente.copy(
+                    edad = edad,
+                    enfermedades = enfermedades,
+                    ocupacion = ocupacion,
+                    observaciones = observaciones
+                )
+                onSave(updatedPaciente)
+            },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xff1C2D66)
+                ),
+                shape = CutCornerShape(8.dp)) {
+                Text("Guardar",
+                    color = colorResource(id = R.color.white),
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Serif)
+            }
+        },
+        dismissButton = {
+            Button(onClick = { onDismiss() },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xff64BDCD)
+                ),
+                shape = CutCornerShape(8.dp)) {
+                Text("Cancelar",
+                    color = colorResource(id = R.color.AzulMarino),
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Serif)
+            }
+        }
+    )
+}
+
+
 

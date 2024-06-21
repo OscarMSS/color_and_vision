@@ -9,6 +9,7 @@ import com.example.colorsandvision.Empleado
 import com.example.colorsandvision.ExamenVista
 import com.example.colorsandvision.Login
 import com.example.colorsandvision.Menu
+import com.example.colorsandvision.PacientesScreen
 import com.example.colorsandvision.Recuperar
 import com.example.colorsandvision.RegistroPaciente
 import com.example.colorsandvision.SelectImageAndUploadScreen
@@ -51,6 +52,9 @@ fun NavManager(){
         }
         composable("selectAndUpload") {
             SelectImageAndUploadScreen()
+        }
+        composable("ConsultaPacientes") {
+            PacientesScreen(navigationController )
         }
     }
 }

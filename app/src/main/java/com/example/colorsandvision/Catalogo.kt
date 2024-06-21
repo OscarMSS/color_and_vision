@@ -351,26 +351,45 @@ fun ConfirmationDialog(
         AlertDialog(
             onDismissRequest = { onDismiss() },
             title = {
-                Text("Eliminar Lente")
+                Text("Eliminar Lente",
+                    color = colorResource(id = R.color.AzulMarino),
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Serif)
             },
             text = {
-                Text("¿Está seguro que desea eliminar este lente?")
+                Text("¿Está seguro que desea eliminar este lente?",
+                    color = colorResource(id = R.color.AzulMarino),
+                    fontFamily = FontFamily.Serif)
             },
             confirmButton = {
                 Button(
                     onClick = {
                         onConfirm()
                         onDismiss()
-                    }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xff1C2D66)
+                    ),
+                    shape = CutCornerShape(8.dp)
                 ) {
-                    Text("Eliminar")
+                    Text("Eliminar",
+                        color = colorResource(id = R.color.white),
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Serif)
                 }
             },
             dismissButton = {
                 Button(
-                    onClick = { onDismiss() }
+                    onClick = { onDismiss() },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xff64BDCD)
+                    ),
+                    shape = CutCornerShape(8.dp)
                 ) {
-                    Text("Cancelar")
+                    Text("Cancelar",
+                        color = colorResource(id = R.color.AzulMarino),
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Serif)
                 }
             }
         )

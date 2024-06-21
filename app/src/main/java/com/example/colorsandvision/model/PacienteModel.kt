@@ -3,16 +3,16 @@ package com.example.colorsandvision.model
 import com.google.firebase.database.Exclude
 
 data class PacienteModel(
-    val pacienteId: String,
-    val nombre: String,
-    val apellidop: String,
-    val apellidom: String,
-    val celular: String,
-    val edad: String,
-    val enfermedades: String,
-    val ocupacion: String,
-    val observaciones: String
-){
+    val pacienteId: String = "",
+    val nombre: String = "",
+    val apellidop: String = "",
+    val apellidom: String = "",
+    val celular: String = "",
+    val edad: String = "",
+    val enfermedades: String = "",
+    val ocupacion: String = "",
+    val observaciones: String = ""
+) {
     // Añadir anotación @Exclude para evitar serialización circular al convertir a mapa
     @Exclude
     fun toMap(): MutableMap<String, Any> {
