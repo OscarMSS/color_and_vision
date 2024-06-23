@@ -3,20 +3,27 @@
 package com.example.colorsandvision
 
 import android.icu.util.Calendar
+import android.util.Log
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -26,8 +33,12 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -42,8 +53,11 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.wear.compose.material.MaterialTheme
 import com.example.colorsandvision.model.ExamenModel
@@ -51,7 +65,10 @@ import com.example.colorsandvision.model.VentaModel
 import com.example.colorsandvision.viewModels.ExamenViewModel
 import com.example.colorsandvision.viewModels.PacienteViewModel
 import com.example.colorsandvision.viewModels.VentaViewModel
+import com.google.firebase.Firebase
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.UUID
@@ -75,13 +92,14 @@ fun FondoExamen(){
 
 
 @Composable
-fun ExamenVista(navigationController: NavHostController, pacienteVM: PacienteViewModel){
+fun ExamenVista(navigationController: NavHostController, pacienteVM: PacienteViewModel) {
     FondoExamen()
 
     val navegation = navigationController
 
-
     var nombre by remember { mutableStateOf("") }
+    var apellidop by remember { mutableStateOf("") }
+    var apellidom by remember { mutableStateOf("") }
     var edad by remember { mutableStateOf("") }
     var enfermedades by remember { mutableStateOf("") }
     var IDPaciente by remember { mutableStateOf("") }
@@ -92,8 +110,8 @@ fun ExamenVista(navigationController: NavHostController, pacienteVM: PacienteVie
     var lineaAOOD by remember { mutableStateOf("") }
     var esferaOD by remember { mutableStateOf("") }
     var esferaOI by remember { mutableStateOf("") }
-    var ejeoi by remember { mutableStateOf("") }
-    var ejeod by remember { mutableStateOf("") }
+    var ejeOI by remember { mutableStateOf("") }
+    var ejeOD by remember { mutableStateOf("") }
     var cilindroOD by remember { mutableStateOf("") }
     var cilindroOI by remember { mutableStateOf("") }
     var presbiciaOD by remember { mutableStateOf("") }
@@ -108,24 +126,29 @@ fun ExamenVista(navigationController: NavHostController, pacienteVM: PacienteVie
     var esferaODError by remember { mutableStateOf(false) }
     var esferaOIError by remember { mutableStateOf(false) }
 
+    var examenes by remember { mutableStateOf(emptyList<ExamenModel>()) }
 
-    val scroll = rememberScrollState(0) //Estado scroll
+    val scroll = rememberScrollState(0) // Estado scroll
     val examenVM = ExamenViewModel()
     val calendar = Calendar.getInstance().time
     val dateFormat = DateFormat.getDateInstance().format(calendar)
 
     // Expresiones regulares para las validaciones
     val numberRegex = Regex("^-?\\d{0,5}(\\.\\d{0,2})?$")
-
+    val phoneNumberRegex = Regex("^\\d+$")
 
     // Function to fetch patient data from Firebase
-    fun fetchPatientData(id: String) {
+    fun fetchPatientData(celular: String) {
         val db = FirebaseFirestore.getInstance()
-        db.collection("paciente").document(id)
+        db.collection("paciente")
+            .whereEqualTo("celular", celular)
             .get()
-            .addOnSuccessListener { document ->
-                if (document != null) {
+            .addOnSuccessListener { documents ->
+                if (!documents.isEmpty) {
+                    val document = documents.first()
                     nombre = document.getString("nombre") ?: ""
+                    apellidop = document.getString("apellidop") ?: ""
+                    apellidom = document.getString("apellidom") ?: ""
                     edad = document.getString("edad") ?: ""
                     enfermedades = document.getString("enfermedades") ?: ""
                     observaciones = document.getString("observaciones") ?: ""
@@ -136,7 +159,6 @@ fun ExamenVista(navigationController: NavHostController, pacienteVM: PacienteVie
             }
     }
 
-
     // Function to check if all required fields are filled
     fun validateFields(): Boolean {
         return lineaOD.isNotEmpty() && lineaOI.isNotEmpty() && lineaAOOI.isNotEmpty() &&
@@ -145,15 +167,40 @@ fun ExamenVista(navigationController: NavHostController, pacienteVM: PacienteVie
                 presbiciaOD.isNotEmpty() && presbiciaOI.isNotEmpty()
     }
 
+    fun guardarExamen() {
+        val examen = ExamenModel(
+            ExamenId = UUID.randomUUID().toString(), // Genera un ID único para el examen,
+            dateFormat = dateFormat,
+            nombre = nombre,
+            apellidop = apellidop,
+            apellidom = apellidom,
+            edad = edad,
+            lineaOD = lineaOD,
+            lineaOI = lineaOI,
+            lineaAOOD = lineaAOOD,
+            lineaAOOI = lineaAOOI,
+            esferaOD = esferaOD,
+            esferaOI = esferaOI,
+            ejeOI = ejeOI,
+            ejeOD = ejeOD,
+            cilindroOD = cilindroOD,
+            cilindroOI = cilindroOI,
+            presbiciaOD = presbiciaOD,
+            presbiciaOI = presbiciaOI,
+            observaciones = obser
+        )
+        // Llama al ViewModel para guardar el examen
+        examenVM.addExamen(examen)
+    }
 
-    Column (
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(scroll)   //Habilitar el scroll verticalmente
+            .verticalScroll(scroll)   // Habilitar el scroll verticalmente
             .navigationBarsPadding(), // Habilitar padding para la barra de navegación
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
-    ){
+    ) {
 
         // Texto Examen
         Spacer(modifier = Modifier.height(50.dp))
@@ -167,24 +214,43 @@ fun ExamenVista(navigationController: NavHostController, pacienteVM: PacienteVie
 
         // Buscador
         Spacer(modifier = Modifier.height(16.dp))
-        var buscador by remember { mutableStateOf(false) }
+        var celularPaciente by remember { mutableStateOf("") }
+        var celularError by remember { mutableStateOf(false) }
         OutlinedTextField(
-            value = IDPaciente,
+            value = celularPaciente,
             onValueChange = {
-                IDPaciente = it
-                fetchPatientData(IDPaciente)
+                celularPaciente = it
+                celularError = !phoneNumberRegex.matches(it)
+                if (!celularError) {
+                    fetchPatientData(celularPaciente)
+                }
             },
             label = {
                 Text(
-                    text = "ID Paciente",
+                    text = "Número de Celular",
                     color = colorResource(id = R.color.AzulMarino),
                     fontFamily = FontFamily.Serif
                 )
             },
             trailingIcon = {
                 Icon(imageVector = Icons.Default.Search, contentDescription = "Buscador")
-            }
+            },
+            isError = celularError,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Done
+            ),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
         )
+        if (celularError) {
+            Text(
+                text = "Número de celular inválido",
+                color = Color.Red,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
         Card(
@@ -205,7 +271,7 @@ fun ExamenVista(navigationController: NavHostController, pacienteVM: PacienteVie
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Nombre: $nombre",
+                    text = "Nombre: $nombre $apellidop $apellidom",
                     color = colorResource(id = R.color.AzulMarino),
                     fontFamily = FontFamily.Serif
                 )
@@ -227,7 +293,6 @@ fun ExamenVista(navigationController: NavHostController, pacienteVM: PacienteVie
             }
         }
 
-
         // Linea OD
         Spacer(modifier = Modifier.height(16.dp))
         OutlinedTextField(value = lineaOD, onValueChange = {
@@ -237,19 +302,18 @@ fun ExamenVista(navigationController: NavHostController, pacienteVM: PacienteVie
             } else {
                 lineaODError = true
             }
-        }, label={
+        }, label = {
             Text(text = "Linea OD",
                 color = colorResource(id = R.color.AzulMarino),
                 fontFamily = FontFamily.Serif)
         })
         if (lineaODError) {
             Text(
-                text = "Linea OD es un campo obligatorio",
+                text = "Formato no válido",
                 color = Color.Red,
                 fontSize = 12.sp
             )
         }
-
 
         // Linea OI
         Spacer(modifier = Modifier.height(16.dp))
@@ -260,20 +324,20 @@ fun ExamenVista(navigationController: NavHostController, pacienteVM: PacienteVie
             } else {
                 lineaOIError = true
             }
-        }, label={
+        }, label = {
             Text(text = "Linea OI",
                 color = colorResource(id = R.color.AzulMarino),
                 fontFamily = FontFamily.Serif)
         })
         if (lineaOIError) {
             Text(
-                text = "Línea OI es un campo obligatorio",
+                text = "Formato no válido",
                 color = Color.Red,
                 fontSize = 12.sp
             )
         }
 
-        // Linea AOOD
+        // Línea AO OD
         Spacer(modifier = Modifier.height(16.dp))
         OutlinedTextField(value = lineaAOOD, onValueChange = {
             if (it.isEmpty() || numberRegex.matches(it)) {
@@ -282,20 +346,20 @@ fun ExamenVista(navigationController: NavHostController, pacienteVM: PacienteVie
             } else {
                 lineaAOODError = true
             }
-        }, label={
-            Text(text = "Linea AOOD",
+        }, label = {
+            Text(text = "Linea AO OD",
                 color = colorResource(id = R.color.AzulMarino),
                 fontFamily = FontFamily.Serif)
         })
         if (lineaAOODError) {
             Text(
-                text = "Linea AOOD es un campo obligatorio",
+                text = "Formato no válido",
                 color = Color.Red,
                 fontSize = 12.sp
             )
         }
 
-        // Linea AOOI
+        // Línea AO OI
         Spacer(modifier = Modifier.height(16.dp))
         OutlinedTextField(value = lineaAOOI, onValueChange = {
             if (it.isEmpty() || numberRegex.matches(it)) {
@@ -304,14 +368,14 @@ fun ExamenVista(navigationController: NavHostController, pacienteVM: PacienteVie
             } else {
                 lineaAOOIError = true
             }
-        }, label={
-            Text(text = "Linea AOOI",
+        }, label = {
+            Text(text = "Linea AO OI",
                 color = colorResource(id = R.color.AzulMarino),
                 fontFamily = FontFamily.Serif)
         })
         if (lineaAOOIError) {
             Text(
-                text = "Linea AOOI es un campo obligatorio",
+                text = "Formato no válido",
                 color = Color.Red,
                 fontSize = 12.sp
             )
@@ -326,14 +390,14 @@ fun ExamenVista(navigationController: NavHostController, pacienteVM: PacienteVie
             } else {
                 esferaODError = true
             }
-        }, label={
+        }, label = {
             Text(text = "Esfera OD",
                 color = colorResource(id = R.color.AzulMarino),
                 fontFamily = FontFamily.Serif)
         })
         if (esferaODError) {
             Text(
-                text = "Esfera OD es un campo obligatorio",
+                text = "Formato no válido",
                 color = Color.Red,
                 fontSize = 12.sp
             )
@@ -348,18 +412,42 @@ fun ExamenVista(navigationController: NavHostController, pacienteVM: PacienteVie
             } else {
                 esferaOIError = true
             }
-        }, label={
+        }, label = {
             Text(text = "Esfera OI",
                 color = colorResource(id = R.color.AzulMarino),
                 fontFamily = FontFamily.Serif)
         })
         if (esferaOIError) {
             Text(
-                text = "Esfera OI es un campo obligatorio",
+                text = "Formato no válido",
                 color = Color.Red,
                 fontSize = 12.sp
             )
         }
+
+        // Eje OD
+        Spacer(modifier = Modifier.height(16.dp))
+        OutlinedTextField(value = ejeOD, onValueChange = {
+            if (it.isEmpty() || numberRegex.matches(it)) {
+                ejeOD = it
+            }
+        }, label = {
+            Text(text = "Eje OD",
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif)
+        })
+
+        // Eje OI
+        Spacer(modifier = Modifier.height(16.dp))
+        OutlinedTextField(value = ejeOI, onValueChange = {
+            if (it.isEmpty() || numberRegex.matches(it)) {
+                ejeOI = it
+            }
+        }, label = {
+            Text(text = "Eje OI",
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif)
+        })
 
         // Cilindro OD
         Spacer(modifier = Modifier.height(16.dp))
@@ -367,12 +455,11 @@ fun ExamenVista(navigationController: NavHostController, pacienteVM: PacienteVie
             if (it.isEmpty() || numberRegex.matches(it)) {
                 cilindroOD = it
             }
-        }, label={
+        }, label = {
             Text(text = "Cilindro OD",
                 color = colorResource(id = R.color.AzulMarino),
                 fontFamily = FontFamily.Serif)
         })
-
 
         // Cilindro OI
         Spacer(modifier = Modifier.height(16.dp))
@@ -380,12 +467,11 @@ fun ExamenVista(navigationController: NavHostController, pacienteVM: PacienteVie
             if (it.isEmpty() || numberRegex.matches(it)) {
                 cilindroOI = it
             }
-        }, label={
+        }, label = {
             Text(text = "Cilindro OI",
                 color = colorResource(id = R.color.AzulMarino),
                 fontFamily = FontFamily.Serif)
         })
-
 
         // Presbicia OD
         Spacer(modifier = Modifier.height(16.dp))
@@ -393,12 +479,11 @@ fun ExamenVista(navigationController: NavHostController, pacienteVM: PacienteVie
             if (it.isEmpty() || numberRegex.matches(it)) {
                 presbiciaOD = it
             }
-        }, label={
+        }, label = {
             Text(text = "Presbicia OD",
                 color = colorResource(id = R.color.AzulMarino),
                 fontFamily = FontFamily.Serif)
         })
-
 
         // Presbicia OI
         Spacer(modifier = Modifier.height(16.dp))
@@ -406,117 +491,214 @@ fun ExamenVista(navigationController: NavHostController, pacienteVM: PacienteVie
             if (it.isEmpty() || numberRegex.matches(it)) {
                 presbiciaOI = it
             }
-        }, label={
-            Text(text = "Presbicio OI",
+        }, label = {
+            Text(text = "Presbicia OI",
                 color = colorResource(id = R.color.AzulMarino),
                 fontFamily = FontFamily.Serif)
-
-        })
-
-        // Ejeoi
-        Spacer(modifier = Modifier.height(16.dp))
-        OutlinedTextField(value = ejeoi, onValueChange = {
-            if (it.isEmpty() || numberRegex.matches(it)) {
-                ejeoi = it
-            }
-        }, label={
-            Text(text = "EjeOI",
-                color = colorResource(id = R.color.AzulMarino),
-                fontFamily = FontFamily.Serif)
-
-        })
-
-        // Ejeod
-        Spacer(modifier = Modifier.height(16.dp))
-        OutlinedTextField(value = ejeod, onValueChange = {
-            if (it.isEmpty() || numberRegex.matches(it)) {
-                ejeod = it
-            }
-        }, label={
-            Text(text = "EjeOD",
-                color = colorResource(id = R.color.AzulMarino),
-                fontFamily = FontFamily.Serif)
-
         })
 
         // Observaciones
         Spacer(modifier = Modifier.height(16.dp))
-        OutlinedTextField(value = obser, onValueChange = {
-            obser = it
-        }, label={
-            Text(text = "Observaciones",
-                color = colorResource(id = R.color.AzulMarino),
-                fontFamily = FontFamily.Serif)
-        },
-            maxLines = 50)
+        OutlinedTextField(
+            value = obser,
+            onValueChange = {
+                obser = it
+            },
+            label = {
+                Text(
+                    text = "Observaciones",
+                    color = colorResource(id = R.color.AzulMarino),
+                    fontFamily = FontFamily.Serif
+                )
+            }
+        )
 
-        // Boton Añadir
+        // Botón Guardar
         Spacer(modifier = Modifier.height(16.dp))
         Button(modifier = Modifier
             .width(200.dp)
             .height(50.dp),
             onClick = {
-                var allFieldsValid = true
-
-                if (lineaOD.isBlank() || !numberRegex.matches(lineaOD)) {
-                    lineaODError = true
-                    allFieldsValid = false
+                if (validateFields()) {
+                    guardarExamen()
+                } else {
+                    // Mostrar mensaje de error o resaltar campos obligatorios
+                    lineaODError = lineaOD.isEmpty()
+                    lineaOIError = lineaOI.isEmpty()
+                    lineaAOODError = lineaAOOD.isEmpty()
+                    lineaAOOIError = lineaAOOI.isEmpty()
+                    esferaODError = esferaOD.isEmpty()
+                    esferaOIError = esferaOI.isEmpty()
                 }
-                if (lineaOI.isBlank() || !numberRegex.matches(lineaOI)) {
-                    lineaOIError = true
-                    allFieldsValid = false
-                }
-                if (lineaAOOD.isBlank() || !numberRegex.matches(lineaAOOD)) {
-                    lineaAOODError = true
-                    allFieldsValid = false
-                }
-                if (lineaAOOI.isBlank() || !numberRegex.matches(lineaAOOI)) {
-                    lineaAOOIError = true
-                    allFieldsValid = false
-                }
-                if (esferaOD.isBlank() || !numberRegex.matches(esferaOD)) {
-                    esferaODError = true
-                    allFieldsValid = false
-                }
-                if (esferaOI.isBlank() || !numberRegex.matches(esferaOI)) {
-                    esferaOIError = true
-                    allFieldsValid = false
-                }
-
-
-                if (allFieldsValid) {
-                    val examen = ExamenModel(
-                        ExamenId = UUID.randomUUID()
-                            .toString(), // o cualquier otro identificador único
-                        lineaOD = lineaOD,
-                        lineaOI = lineaOI,
-                        lineaAOOD = lineaAOOD,
-                        lineaAOOI = lineaAOOI,
-                        cilindroOD = cilindroOD,
-                        cilindroOI = cilindroOI,
-                        presbiciaOD = presbiciaOD,
-                        presbiciaOI = presbiciaOI,
-                        observaciones = observaciones,
-                        esferaOD = esferaOD,
-                        esferaOI = esferaOI,
-                        ejeoi =  ejeoi,
-                        ejeod = ejeod
-                    )
-                    examenVM.addExamen(examen)
-                    navegation.navigate("Menu")
-                }
+                navigationController.navigate("Menu")
             },
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color(0xff1C2D66)
             ),
             shape = CutCornerShape(8.dp)
         ) {
-            Text(text = "Añadir",
-                color = colorResource(id = R.color.white),
-                fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Serif)
+            Text(
+                text = "Guardar",
+                color = Color.White
+            )
         }
+    }
+}
+
+@Composable
+fun ListarExamenes(navigationController: NavHostController) {
+    val examenVM: ExamenViewModel = viewModel()
+    val examenes by examenVM.examenes.observeAsState(emptyList())
+
+    LaunchedEffect(Unit) {
+        examenVM.fetchExamenes()
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Consulta Exámen",
+                            color = colorResource(id = R.color.AzulMarino),
+                            fontFamily = FontFamily.Serif,
+                            fontWeight = FontWeight.Normal
+                        )
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = {
+                        navigationController.navigate("Menu")
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Regresar",
+                            tint = colorResource(id = R.color.AzulMarino)
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xff64BDCD)
+                )
+            )
+        },
+        content = { padding ->
+            LazyColumn(
+                contentPadding = padding,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(examenes) { examen ->
+                    TarjetaExamen(examen = examen)
+                }
+            }
+        }
+    )
+}
 
 
+@Composable
+fun TarjetaExamen(examen: ExamenModel) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        elevation = CardDefaults.cardElevation(8.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.LightGray),
+        shape = CutCornerShape(8.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            // Detalles del paciente
+            Text(
+                text = "Fecha: ${examen.dateFormat}",
+                fontWeight = FontWeight.Bold,
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+            Text(
+                text = "Nombre: ${examen.nombre} ${examen.apellidop} ${examen.apellidom}",
+                fontWeight = FontWeight.Bold,
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+            Text(
+                text = "Edad: ${examen.edad}",
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+
+            // Detalles del examen visual
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Linea OD: ${examen.lineaOD}",
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+            Text(
+                text = "Linea OI: ${examen.lineaOI}",
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+            Text(
+                text = "Linea AOOD: ${examen.lineaAOOD}",
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+            Text(
+                text = "Linea AOOI: ${examen.lineaAOOI}",
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+            Text(
+                text = "Esfera OD: ${examen.esferaOD}",
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+            Text(
+                text = "Esfera OI: ${examen.esferaOI}",
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+            Text(
+                text = "Cilindro OD: ${examen.cilindroOD}",
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+            Text(
+                text = "Cilindro OI: ${examen.cilindroOI}",
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+            Text(
+                text = "Presbicia OD: ${examen.presbiciaOD}",
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+            Text(
+                text = "Presbicia OI: ${examen.presbiciaOI}",
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+            Text(
+                text = "Eje OD: ${examen.ejeOD}",
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+            Text(
+                text = "Eje OI: ${examen.ejeOI}",
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+            Text(
+                text = "Observaciones: ${examen.observaciones}",
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+        }
     }
 }

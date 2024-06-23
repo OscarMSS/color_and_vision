@@ -7,6 +7,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.colorsandvision.Catalogo
 import com.example.colorsandvision.Empleado
 import com.example.colorsandvision.ExamenVista
+import com.example.colorsandvision.ListarExamenes
 import com.example.colorsandvision.Login
 import com.example.colorsandvision.Menu
 import com.example.colorsandvision.PacientesScreen
@@ -55,6 +56,9 @@ fun NavManager(){
         }
         composable("ConsultaPacientes") {
             PacientesScreen(navigationController )
+        }
+        composable("ConsultaExamen") {
+            ListarExamenes(navigationController)
         }
     }
 }
