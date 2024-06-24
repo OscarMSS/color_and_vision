@@ -150,7 +150,7 @@ fun LoginInicio(navegation:NavHostController, loginVM: LoginViewModel){
         horizontalAlignment = Alignment.CenterHorizontally
     ){
         Spacer(modifier = Modifier.height(50.dp))
-        Image(painter = painterResource(id = R.drawable.logo), contentDescription = "Login imagen",
+        Image(painter = painterResource(id = R.drawable.logo2), contentDescription = "Login imagen",
             modifier = Modifier.size(220.dp))
 
         Spacer(modifier = Modifier.height(1.dp))
