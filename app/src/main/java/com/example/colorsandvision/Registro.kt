@@ -441,7 +441,7 @@ fun PacienteCard(paciente: PacienteModel, onEdit: (PacienteModel) -> Unit) {
             .padding(8.dp)
             .fillMaxWidth(),
         elevation = CardDefaults.cardElevation(8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.LightGray),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = CutCornerShape(8.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {

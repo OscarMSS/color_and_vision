@@ -146,7 +146,7 @@ fun Catalogo(navigationController: NavHostController, lenteViewModel: LenteViewM
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Catálogo",
+                            text = "Catálogo de Armazones",
                             color = colorResource(id = R.color.AzulMarino),
                             fontFamily = FontFamily.Serif,
                             fontWeight = FontWeight.Normal

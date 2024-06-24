@@ -607,21 +607,22 @@ fun TarjetaExamen(examen: ExamenModel) {
             .fillMaxWidth()
             .padding(vertical = 8.dp),
         elevation = CardDefaults.cardElevation(8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.LightGray),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = CutCornerShape(8.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
             // Detalles del paciente
+
             Text(
-                text = "Fecha: ${examen.dateFormat}",
+                text = "Nombre: ${examen.nombre} ${examen.apellidop} ${examen.apellidom}",
                 fontWeight = FontWeight.Bold,
                 color = colorResource(id = R.color.AzulMarino),
                 fontFamily = FontFamily.Serif
             )
             Text(
-                text = "Nombre: ${examen.nombre} ${examen.apellidop} ${examen.apellidom}",
+                text = "Fecha: ${examen.dateFormat}",
                 fontWeight = FontWeight.Bold,
                 color = colorResource(id = R.color.AzulMarino),
                 fontFamily = FontFamily.Serif

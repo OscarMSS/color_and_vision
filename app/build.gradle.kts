@@ -87,6 +87,7 @@ dependencies {
     implementation(libs.firebase.ml.modeldownloader.ktx)
     implementation(libs.androidx.recyclerview)
     implementation(libs.androidx.runtime.livedata)
+    implementation(libs.androidx.benchmark.macro)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

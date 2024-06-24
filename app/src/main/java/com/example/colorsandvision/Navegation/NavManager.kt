@@ -8,6 +8,7 @@ import com.example.colorsandvision.Catalogo
 import com.example.colorsandvision.Empleado
 import com.example.colorsandvision.ExamenVista
 import com.example.colorsandvision.ListarExamenes
+import com.example.colorsandvision.ListarVenta
 import com.example.colorsandvision.Login
 import com.example.colorsandvision.Menu
 import com.example.colorsandvision.PacientesScreen
@@ -59,6 +60,9 @@ fun NavManager(){
         }
         composable("ConsultaExamen") {
             ListarExamenes(navigationController)
+        }
+        composable("ConsultaVenta") {
+            ListarVenta(navigationController)
         }
     }
 }

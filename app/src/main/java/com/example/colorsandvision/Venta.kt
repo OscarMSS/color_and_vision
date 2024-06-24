@@ -3,34 +3,64 @@
 package com.example.colorsandvision
 
 import android.icu.util.Calendar
-import android.util.Log
-import android.widget.Toast
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.google.firebase.firestore.FirebaseFirestore
-import java.text.DateFormat
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.navigation.compose.rememberNavController
-import com.example.colorsandvision.model.PacienteModel
 import com.example.colorsandvision.model.VentaModel
 import com.example.colorsandvision.viewModels.VentaViewModel
+import com.google.firebase.firestore.FirebaseFirestore
+import java.text.DateFormat
 import java.util.UUID
 
 // expresiones regulares para las validaciones
@@ -61,7 +91,8 @@ fun Venta(navigationController: NavHostController) {
     val calendar = Calendar.getInstance().time
     val dateFormat = DateFormat.getDateInstance().format(calendar)
     val ventaVM = VentaViewModel()
-
+    var apellidop by remember { mutableStateOf("") }
+    var apellidom by remember { mutableStateOf("") }
     var IDPaciente by remember { mutableStateOf("") }
     var nombre by remember { mutableStateOf("") }
     var edad by remember { mutableStateOf("") }
@@ -80,6 +111,11 @@ fun Venta(navigationController: NavHostController) {
     var precioAdicError by remember { mutableStateOf(false) }
     var fechaentregaError by remember { mutableStateOf(false) }
 
+    // Expresiones regulares para las validaciones
+    val numberRegex = Regex("^-?\\d{0,5}(\\.\\d{0,2})?$")
+    val phoneNumberRegex = Regex("^\\d+$")
+
+    // Calcular el precio total
     val total = try {
         precioAdic.toDouble() + precioLente.toDouble() + (200 * serie.toDouble())
     } catch (e: NumberFormatException) {
@@ -87,20 +123,43 @@ fun Venta(navigationController: NavHostController) {
     }
 
     // Function to fetch patient data from Firebase
-    fun fetchPatientData(id: String) {
+    fun fetchPatientData(celular: String) {
         val db = FirebaseFirestore.getInstance()
-        db.collection("paciente").document(id)
+        db.collection("paciente")
+            .whereEqualTo("celular", celular)
             .get()
-            .addOnSuccessListener { document ->
-                if (document != null) {
+            .addOnSuccessListener { documents ->
+                if (!documents.isEmpty) {
+                    val document = documents.first()
                     nombre = document.getString("nombre") ?: ""
+                    apellidop = document.getString("apellidop") ?: ""
+                    apellidom = document.getString("apellidom") ?: ""
                     edad = document.getString("edad") ?: ""
-                    celular = document.getString("celular") ?: ""
                 }
             }
             .addOnFailureListener { exception ->
                 // Handle the error
             }
+    }
+
+    fun guardarVenta() {
+        val venta = VentaModel(
+            ventaId = UUID.randomUUID().toString(), // Genera un ID único para la venta
+            dateFormat = dateFormat,
+            nombre = nombre,
+            apellidop = apellidop,
+            apellidom = apellidom,
+            accesorio = accerorio,
+            modelo = modelo,
+            serie = serie,
+            tratamiento = tratamiento,
+            precioLente = precioLente.toDouble(),
+            material = material,
+            precioAdic = precioAdic.toDouble(),
+            fechaentrega = fechaentrega,
+            total = total.toDouble()
+        )
+        ventaVM.addVenta(venta)
     }
 
     Column(
@@ -121,24 +180,43 @@ fun Venta(navigationController: NavHostController) {
         )
 
         Spacer(modifier = Modifier.height(16.dp))
-        var buscador by remember { mutableStateOf(false) }
+        var celularPaciente by remember { mutableStateOf("") }
+        var celularError by remember { mutableStateOf(false) }
         OutlinedTextField(
-            value = IDPaciente,
+            value = celularPaciente,
             onValueChange = {
-                IDPaciente = it
-                fetchPatientData(IDPaciente)
+                celularPaciente = it
+                celularError = !phoneNumberRegex.matches(it)
+                if (!celularError) {
+                    fetchPatientData(celularPaciente)
+                }
             },
             label = {
                 Text(
-                    text = "ID Paciente",
+                    text = "Número de Celular",
                     color = colorResource(id = R.color.AzulMarino),
                     fontFamily = FontFamily.Serif
                 )
             },
             trailingIcon = {
                 Icon(imageVector = Icons.Default.Search, contentDescription = "Buscador")
-            }
+            },
+            isError = celularError,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Done
+            ),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
         )
+        if (celularError) {
+            Text(
+                text = "Número de celular inválido",
+                color = Color.Red,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
         Card(
@@ -159,17 +237,12 @@ fun Venta(navigationController: NavHostController) {
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Nombre: $nombre",
+                    text = "Nombre: $nombre $apellidop $apellidom",
                     color = colorResource(id = R.color.AzulMarino),
                     fontFamily = FontFamily.Serif
                 )
                 Text(
                     text = "Edad: $edad",
-                    color = colorResource(id = R.color.AzulMarino),
-                    fontFamily = FontFamily.Serif
-                )
-                Text(
-                    text = "Celular: $celular",
                     color = colorResource(id = R.color.AzulMarino),
                     fontFamily = FontFamily.Serif
                 )
@@ -363,19 +436,7 @@ fun Venta(navigationController: NavHostController) {
                 }
 
                 if (allFieldsValid) {
-                    val venta = VentaModel(
-                        ventaId = UUID.randomUUID().toString(), // o cualquier otro identificador único
-                        accerorio = accerorio,
-                        modelo = modelo,
-                        serie = serie,
-                        tratamiento = tratamiento,
-                        precioLente = precioLente,
-                        material = material,
-                        precioAdic = precioAdic,
-                        fechaentrega = fechaentrega,
-                        total = total.toString()
-                    )
-                    ventaVM.addVenta(venta)
+                    guardarVenta()
                     navegation.navigate("Menu")
                 }
             },
@@ -415,9 +476,226 @@ fun Venta(navigationController: NavHostController) {
     }
 }
 
-@Preview(showBackground = true)
 @Composable
-fun PreviewVenta() {
+fun ListarVenta(navigationController: NavHostController) {
+    val ventaVM: VentaViewModel = viewModel()
+    val ventas by ventaVM.ventas.observeAsState(emptyList())
 
+    LaunchedEffect(Unit) {
+        ventaVM.fetchVentas()
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Consulta Ventas",
+                            color = colorResource(id = R.color.AzulMarino),
+                            fontFamily = FontFamily.Serif,
+                            fontWeight = FontWeight.Normal
+                        )
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = {
+                        navigationController.navigate("Menu")
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Regresar",
+                            tint = colorResource(id = R.color.AzulMarino)
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xff64BDCD)
+                )
+            )
+        },
+        content = { padding ->
+            LazyColumn(
+                contentPadding = padding,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(ventas) { venta ->
+                    TarjetaVenta(venta = venta, ventaVM = ventaVM)
+                }
+            }
+        }
+    )
 }
+
+@Composable
+fun TarjetaVenta(venta: VentaModel, ventaVM: VentaViewModel) {
+    var showDialog by remember { mutableStateOf(false) }
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        elevation = CardDefaults.cardElevation(8.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = CutCornerShape(8.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            if (venta.entregado) {
+                Text(
+                    text = "Entregado",
+                    fontWeight = FontWeight.Bold,
+                    color = colorResource(id = R.color.Verde),
+                    fontFamily = FontFamily.Serif
+                )
+            }
+            Text(
+                text = "Fecha de Entrega: ${venta.fechaentrega}",
+                fontWeight = FontWeight.Bold,
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+            Text(
+                text = "Nombre: ${venta.nombre} ${venta.apellidop} ${venta.apellidom}",
+                fontWeight = FontWeight.Bold,
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+            Text(
+                text = "Fecha: ${venta.dateFormat}",
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Modelo: ${venta.modelo}",
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+            Text(
+                text = "Serie: ${venta.serie}",
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+            Text(
+                text = "Material: ${venta.material}",
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+            Text(
+                text = "Accesorio: ${venta.accesorio}",
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+            Text(
+                text = "Tratamiento: ${venta.tratamiento}",
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+            Text(
+                text = "Precio del lente: ${venta.precioLente}",
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+            Text(
+                text = "Precio Adicional: ${venta.precioAdic}",
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+            Text(
+                text = "Total: ${venta.total}",
+                color = colorResource(id = R.color.AzulMarino),
+                fontFamily = FontFamily.Serif
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                IconButton(
+                    onClick = {
+                        showDialog = true
+                    },
+                    modifier = Modifier.size(48.dp) // Tamaño del IconButton
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Entregado",
+                        tint = colorResource(id = R.color.Verde)
+                    )
+                }
+            }
+        }
+    }
+    ConfirmationVenta(
+        showDialog = showDialog,
+        onConfirm = {
+            ventaVM.markAsDelivered(venta.ventaId)
+            showDialog = false
+        },
+        onDismiss = {
+            showDialog = false
+        }
+    )
+}
+
+@Composable
+fun ConfirmationVenta(
+    showDialog: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { onDismiss() },
+            title = {
+                Text("Entrega",
+                    color = colorResource(id = R.color.AzulMarino),
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Serif)
+            },
+            text = {
+                Text("¿Está seguro que fue entregado?",
+                    color = colorResource(id = R.color.AzulMarino),
+                    fontFamily = FontFamily.Serif)
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onConfirm()
+                        onDismiss()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xff1C2D66)
+                    ),
+                    shape = CutCornerShape(8.dp)
+                ) {
+                    Text("Confirmar",
+                        color = colorResource(id = R.color.white),
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Serif)
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { onDismiss() },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xff64BDCD)
+                    ),
+                    shape = CutCornerShape(8.dp)
+                ) {
+                    Text("Cancelar",
+                        color = colorResource(id = R.color.AzulMarino),
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Serif)
+                }
+            }
+        )
+    }
+}
+
+
+
 

@@ -4,6 +4,7 @@ import com.google.firebase.database.Exclude
 
 data class ExamenModel(
     val ExamenId: String = "",
+    val dateFormat : String = "",
     val lineaOD: String = "",
     val lineaOI: String = "",
     val lineaAOOI: String = "",
@@ -20,8 +21,8 @@ data class ExamenModel(
     val nombre : String="",
     val apellidop : String="",
     val apellidom : String="",
-    val edad : String="",
-    val dateFormat : String=""
+    val edad : String=""
+
 ){
     // Añadir anotación @Exclude para evitar serialización circular al convertir a mapa
     @Exclude
@@ -45,7 +46,7 @@ data class ExamenModel(
             "apellidop" to this.apellidop,
             "apellidom" to this.apellidom,
             "edad" to this.edad,
-            "fecha" to this.dateFormat
+            "dateFormat" to this.dateFormat
 
         )
     }
